@@ -1,7 +1,7 @@
 greadability = function (nodes, links) {
   'use strict';
 
-  var i, n, m, degree; 
+  var i, n, m, degree, cMax; 
 
   n = nodes.length;
   m = links.length;
@@ -73,7 +73,7 @@ greadability = function (nodes, links) {
     }
   }
 
-  function calculateLinkCrossings () {
+  function linkCrossings () {
     var i, j, c = 0, cMax, line1, line2;
 
     for (i = 0; i < links.length; ++i) {
@@ -93,12 +93,12 @@ greadability = function (nodes, links) {
       }
     }
 
-    cMax = (m * (m - 1) / 2) - d3.sum(degree.map(function (d) { return d * d - 1})) / 2;
-
-    return 1 - (cMax > 0 ? c / cMax : 0);
+    return c;
   }
 
-  graphStats.crossing = calculateLinkCrossings();
+  cMax = (m * (m - 1) / 2) - d3.sum(degree.map(function (d) { return d * d - 1})) / 2;
+
+  graphStats.crossing = 1 - (cMax > 0 ? linkCrossings() / cMax : 0);
 
   return graphStats;
 };
