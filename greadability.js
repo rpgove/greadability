@@ -35,8 +35,8 @@ greadability = function (nodes, links) {
 
   // Assume node.x and node.y are the coordinates
 
-  function calculateLinkCrossings () {
-    var i, j, c = 0, cMax, line1, line2, d1, d2, d3, d4;
+  function linesCross (line1, line2) {
+    var d1, d2, d3, d4;
 
     function direction (pi, pj, pk) {
       var p1 = [pk[0] - pi[0], pk[1] - pi[1]];
@@ -51,6 +51,31 @@ greadability = function (nodes, links) {
         pk[1] <= Math.max(pi[1], pj[1]);
     }
 
+    // CLRS 2nd ed. pg. 937
+    d1 = direction(line2[0], line2[1], line1[0]);
+    d2 = direction(line2[0], line2[1], line1[1]);
+    d3 = direction(line1[0], line1[1], line2[0]);
+    d4 = direction(line1[0], line1[1], line2[1]);
+
+    if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
+      ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) {
+      return true;
+    } else if (d1 === 0 && onSegment(line2[0], line2[1], line1[0])) {
+      return true;
+    } else if (d2 === 0 && onSegment(line2[0], line2[1], line1[1])) {
+      return true;
+    } else if (d3 === 0 && onSegment(line1[0], line1[1], line2[0])) {
+      return true;
+    } else if (d4 === 0 && onSegment(line1[0], line1[1], line2[1])) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  function calculateLinkCrossings () {
+    var i, j, c = 0, cMax, line1, line2;
+
     for (i = 0; i < links.length; ++i) {
       line1 = [
         [links[i].source.x, links[i].source.y],
@@ -64,24 +89,7 @@ greadability = function (nodes, links) {
           [links[j].target.x, links[j].target.y]
         ];
 
-        // CLRS 2nd ed. pg. 937
-        d1 = direction(line2[0], line2[1], line1[0]);
-        d2 = direction(line2[0], line2[1], line1[1]);
-        d3 = direction(line1[0], line1[1], line2[0]);
-        d4 = direction(line1[0], line1[1], line2[1]);
-
-        if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
-          ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) {
-          ++c;
-        } else if (d1 === 0 && onSegment(line2[0], line2[1], line1[0])) {
-          ++c;
-        } else if (d2 === 0 && onSegment(line2[0], line2[1], line1[1])) {
-          ++c;
-        } else if (d3 === 0 && onSegment(line1[0], line1[1], line2[0])) {
-          ++c;
-        } else if (d4 === 0 && onSegment(line1[0], line1[1], line2[1])) {
-          ++c;
-        }
+        c += linesCross(line1, line2) ? 1 : 0;
       }
     }
 
@@ -89,8 +97,6 @@ greadability = function (nodes, links) {
 
     return 1 - (cMax > 0 ? c / cMax : 0);
   }
-
-  function calculateLinkCrossingAngle () {}
 
   graphStats.crossing = calculateLinkCrossings();
 
