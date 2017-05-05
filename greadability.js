@@ -1,11 +1,12 @@
 greadability = function (nodes, links) {
   'use strict';
 
-  var i, n, m, degree, cMax; 
+  var i, n, m, degree, c, cMax, idealAngle, d, dMax; 
 
   n = nodes.length;
   m = links.length;
   degree = new Array(n);
+  idealAngle = 70;
 
   /*
   * Tracks the global graph readability metrics.
@@ -82,13 +83,15 @@ greadability = function (nodes, links) {
         [links[i].target.x, links[i].target.y]
       ];
 
-      for (j = i + 1; j < links.length; ++j) {
-        // Check if node i and node j intersect
+      for (j = 0; j < links.length; ++j) {
+        if (i === j) continue;
+
         line2 = [
           [links[j].source.x, links[j].source.y],
           [links[j].target.x, links[j].target.y]
         ];
 
+        // Check if link i and link j intersect
         c += linesCross(line1, line2) ? 1 : 0;
       }
     }
@@ -96,9 +99,63 @@ greadability = function (nodes, links) {
     return c;
   }
 
+  function linesAngle (line1, line2) {
+    // Acute angle of intersection, in degrees
+    if (!linesCross(line1, line2)) return 0;
+
+    var slope1 = (line1[1][1] - line1[0][1]) / (line1[1][0] - line1[0][0]);
+    var slope2 = (line2[1][1] - line2[0][1]) / (line2[1][0] - line2[0][0]);
+    var angle = Math.abs(Math.atan(slope1) - Math.atan(slope2));
+
+    return (angle > Math.PI / 2 ? Math.PI - angle : angle) * 180 / Math.PI;
+  }
+
+  function linkAngleDevSum (link1) {
+    var j, line1, line2, link2, sum = 0;
+
+    line1 = [
+      [link1.source.x, link1.source.y],
+      [link1.target.x, link1.target.y]
+    ];
+
+    for (j = 0; j < m; ++j) {
+      link2 = links[j];
+      if (link1 === link2) continue;
+
+      line2 = [
+        [link2.source.x, link2.source.y],
+        [link2.target.x, link2.target.y]
+      ];
+
+      if (linesCross(line1, line2)) {
+        sum += Math.abs(idealAngle - linesAngle(line1, line2));
+      }
+    }
+
+    return sum;
+  }
+
+  function linkCrossingAngle () {
+    var i, d = 0;
+
+    for (i = 0; i < m; ++i) {
+      d += linkAngleDevSum(links[i]);
+    }
+
+    return d;
+  }
+
   cMax = (m * (m - 1) / 2) - d3.sum(degree.map(function (d) { return d * d - 1})) / 2;
 
-  graphStats.crossing = 1 - (cMax > 0 ? linkCrossings() / cMax : 0);
+  c = linkCrossings();
+
+  dMax = c * idealAngle;
+
+  d = linkCrossingAngle();
+
+  graphStats.crossing = 1 - (cMax > 0 ? c / cMax : 0);
+
+  graphStats.crossingAngle = 1 - (dMax > 0 > d / dMax : 0);
 
   return graphStats;
 };
