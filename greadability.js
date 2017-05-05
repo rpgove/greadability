@@ -176,6 +176,35 @@ greadability = function (nodes, links) {
     return d / n;
   }
 
+  function angularResDev () {
+    var j, d = 0, node, idealMinAngle, incident;
+
+    for (j = 0; j < n; ++j) {
+      node = nodes[j];
+
+      idealMinAngle = 360 / degree[j];
+
+      incident = links.filter(function (l) {
+        return l.source === node || l.target === node;
+      });
+
+      d += d3.sum(incident.map(function (l, i) {
+        var nextLink = links[(i + 1) % incident.length];
+        var line1 = [
+          [l.source.x, l.source.y],
+          [l.target.x, l.target.y]
+        ];
+        var line2 = [
+          [nextLink.source.x, nextLink.source.y],
+          [nextLink.target.x, nextLink.target.y]
+        ];
+        return Math.abs(idealMinAngle - linesAngle(line1, line2)) / idealMinAngle;
+      })) / degree[j];
+
+      return d / n;
+    }
+  }
+
   cMax = (m * (m - 1) / 2) - d3.sum(degree.map(function (d) { return d * d - 1})) / 2;
 
   c = linkCrossings();
@@ -189,6 +218,8 @@ greadability = function (nodes, links) {
   graphStats.crossingAngle = 1 - (dMax > 0 > d / dMax : 0);
 
   graphStats.angularResMin = 1 - angularResMin();
+
+  graphStats.angularResDev = 1 - angularResDev();
 
   return graphStats;
 };
