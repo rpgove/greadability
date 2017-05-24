@@ -22,6 +22,7 @@ greadability = function (nodes, links) {
 
   for (i = 0; i < n; ++i) {
     nodes[i].index = i;
+    degree[i] = 0;
   }
 
   // Make sure source and target are nodes and not indices.
@@ -30,8 +31,8 @@ greadability = function (nodes, links) {
     if (typeof l.source !== "object") l.source = nodes[links.source];
     if (typeof l.target !== "object") l.target = nodes[links.target];
 
-    degree[l.source.index] = (degree[l.source.index] || 0) + 1;
-    degree[l.target.index] = (degree[l.target.index] || 0) + 1;
+    degree[l.source.index] += 1;
+    degree[l.target.index] += 1;
   });
 
   // Assume node.x and node.y are the coordinates
@@ -99,9 +100,9 @@ greadability = function (nodes, links) {
     return c;
   }
 
-  function linesAngle (line1, line2) {
+  function linesAngle (line1, line2, linesAreSegments) {
     // Acute angle of intersection, in degrees
-    if (!linesCross(line1, line2)) return 0;
+    if (linesAreSegments && !linesCross(line1, line2)) return 0;
 
     var slope1 = (line1[1][1] - line1[0][1]) / (line1[1][0] - line1[0][0]);
     var slope2 = (line2[1][1] - line2[0][1]) / (line2[1][0] - line2[0][0]);
@@ -128,7 +129,7 @@ greadability = function (nodes, links) {
       ];
 
       if (linesCross(line1, line2)) {
-        sum += Math.abs(idealAngle - linesAngle(line1, line2));
+        sum += Math.abs(idealAngle - linesAngle(line1, line2, true));
       }
     }
 
@@ -151,10 +152,28 @@ greadability = function (nodes, links) {
     for (j = 0; j < n; ++j) {
       node = nodes[j];
 
+      if (!degree[j]) continue;
+
       idealMinAngle = 360 / degree[j];
 
       incident = links.filter(function (l) {
         return l.source === node || l.target === node;
+      });
+
+      // Sort edges by the angle they make from an imaginary vector
+      // emerging at angle 0 on the unit circle.
+      // Necessary for calculating angles of incident edges correctly
+      incident.sort(function (a, b) {
+        var line0 = [[node.x, node.y], [node.x+1, node.y]];
+        var lineA = [
+          [a.source.x, a.source.y],
+          [a.target.x, a.target.y]
+        ];
+        var lineB = [
+          [b.source.x, b.source.y],
+          [b.target.x, b.target.y]
+        ];
+        return linesAngle(line0, lineB) - linesAngle(line0, lineA);
       });
 
       minAngle = d3.min(incident.map(function (l, i) {
@@ -173,7 +192,8 @@ greadability = function (nodes, links) {
       d += Math.abs(idealMinAngle - minAngle) / idealMinAngle;
     }
 
-    return d / n;
+    // Divide by number of nodes with degree != 0
+    return d / degree.filter(function (d) { return d; }).length;
   }
 
   function angularResDev () {
@@ -182,10 +202,28 @@ greadability = function (nodes, links) {
     for (j = 0; j < n; ++j) {
       node = nodes[j];
 
+      if (!degree[j]) continue;
+
       idealMinAngle = 360 / degree[j];
 
       incident = links.filter(function (l) {
         return l.source === node || l.target === node;
+      });
+
+      // Sort edges by the angle they make from an imaginary vector
+      // emerging at angle 0 on the unit circle.
+      // Necessary for calculating angles of incident edges correctly
+      incident.sort(function (a, b) {
+        var line0 = [[node.x, node.y], [node.x+1, node.y+1]];
+        var lineA = [
+          [a.source.x, a.source.y],
+          [a.target.x, a.target.y]
+        ];
+        var lineB = [
+          [b.source.x, b.source.y],
+          [b.target.x, b.target.y]
+        ];
+        return linesAngle(line0, lineB) - linesAngle(line0, lineA);
       });
 
       d += d3.sum(incident.map(function (l, i) {
@@ -201,7 +239,8 @@ greadability = function (nodes, links) {
         return Math.abs(idealMinAngle - linesAngle(line1, line2)) / idealMinAngle;
       })) / degree[j];
 
-      return d / n;
+      // Divide by number of nodes with degree != 0
+      return d / degree.filter(function (d) { return d; }).length;
     }
   }
 
@@ -215,11 +254,11 @@ greadability = function (nodes, links) {
 
   graphStats.crossing = 1 - (cMax > 0 ? c / cMax : 0);
 
-  graphStats.crossingAngle = 1 - (dMax > 0 > d / dMax : 0);
+  graphStats.crossingAngle = 1 - (dMax > 0 ? d / dMax : 0);
 
-  graphStats.angularResMin = 1 - angularResMin();
+  graphStats.angularResolutionMin = 1 - angularResMin();
 
-  graphStats.angularResDev = 1 - angularResDev();
+  graphStats.angularResolutionDev = 1 - angularResDev();
 
   return graphStats;
 };
