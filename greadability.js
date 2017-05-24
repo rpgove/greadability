@@ -132,6 +132,14 @@ greadability = function (nodes, links) {
       link2 = links[j];
       if (link1 === link2) continue;
 
+      // Links cannot intersect if they share a node
+      if (link1.source === link2.source ||
+        link1.source === link2.target ||
+        link1.target === link2.source ||
+        link1.target === link2.target) {
+        continue;
+      }
+
       line2 = [
         [link2.source.x, link2.source.y],
         [link2.target.x, link2.target.y]
