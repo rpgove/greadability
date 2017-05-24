@@ -28,8 +28,8 @@ greadability = function (nodes, links) {
   // Make sure source and target are nodes and not indices.
   // Calculate degree.
   links.forEach(function (l) {
-    if (typeof l.source !== "object") l.source = nodes[links.source];
-    if (typeof l.target !== "object") l.target = nodes[links.target];
+    if (typeof l.source !== "object") l.source = nodes[l.source];
+    if (typeof l.target !== "object") l.target = nodes[l.target];
 
     degree[l.source.index] += 1;
     degree[l.target.index] += 1;
@@ -104,6 +104,7 @@ greadability = function (nodes, links) {
     // Acute angle of intersection, in degrees
     if (linesAreSegments && !linesCross(line1, line2)) return 0;
 
+    // TODO: case where both slopes == 0 but angle should be 180
     var slope1 = (line1[1][1] - line1[0][1]) / (line1[1][0] - line1[0][0]);
     var slope2 = (line2[1][1] - line2[0][1]) / (line2[1][0] - line2[0][0]);
     var angle = Math.abs(Math.atan(slope1) - Math.atan(slope2));
@@ -177,7 +178,7 @@ greadability = function (nodes, links) {
       });
 
       minAngle = d3.min(incident.map(function (l, i) {
-        var nextLink = links[(i + 1) % incident.length];
+        var nextLink = incident[(i + 1) % incident.length];
         var line1 = [
           [l.source.x, l.source.y],
           [l.target.x, l.target.y]
@@ -227,7 +228,7 @@ greadability = function (nodes, links) {
       });
 
       d += d3.sum(incident.map(function (l, i) {
-        var nextLink = links[(i + 1) % incident.length];
+        var nextLink = incident[(i + 1) % incident.length];
         var line1 = [
           [l.source.x, l.source.y],
           [l.target.x, l.target.y]
