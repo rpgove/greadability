@@ -42,7 +42,7 @@ greadability = function (nodes, links) {
 
     function direction (pi, pj, pk) {
       var p1 = [pk[0] - pi[0], pk[1] - pi[1]];
-      var p2 = [pj[0] - pi[0], pk[1] - pi[1]];
+      var p2 = [pj[0] - pi[0], pj[1] - pi[1]];
       return p1[0] * p2[1] - p2[0] * p1[1];
     }
 
@@ -86,6 +86,14 @@ greadability = function (nodes, links) {
 
       for (j = 0; j < links.length; ++j) {
         if (i === j) continue;
+
+        // Links cannot intersect if they share a node
+        if (links[i].source === links[j].source ||
+          links[i].source === links[j].target ||
+          links[i].target === links[j].source ||
+          links[i].target === links[j].target) {
+          continue;
+        }
 
         line2 = [
           [links[j].source.x, links[j].source.y],
@@ -245,7 +253,7 @@ greadability = function (nodes, links) {
     }
   }
 
-  cMax = (m * (m - 1) / 2) - d3.sum(degree.map(function (d) { return d * d - 1})) / 2;
+  cMax = (m * (m - 1) / 2) - d3.sum(degree.map(function (d) { return d * (d - 1); })) / 2;
 
   c = linkCrossings();
 
