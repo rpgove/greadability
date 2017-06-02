@@ -1,7 +1,12 @@
 greadability = function (nodes, links) {
   'use strict';
 
-  var i, n, m, degree, c, cMax, idealAngle, d, dMax; 
+  var i, n, m, degree, c, cMax, idealAngle, d, dMax;
+
+  // Filter out self loops
+  links = links.filter(function (l) {
+    return l.source !== l.target;
+  });
 
   n = nodes.length;
   m = links.length;
@@ -180,7 +185,7 @@ greadability = function (nodes, links) {
           !(l.source === node && l.target === node);
       });
 
-      if (!degree[j] || incident.length === 0) continue;
+      if (!degree[j] || incident.length <= 1) continue;
 
       // Sort edges by the angle they make from an imaginary vector
       // emerging at angle 0 on the unit circle.
@@ -215,7 +220,7 @@ greadability = function (nodes, links) {
     }
 
     // Divide by number of nodes with degree != 0
-    return d / degree.filter(function (d) { return d; }).length;
+    return d / degree.filter(function (d) { return d >= 1; }).length;
   }
 
   function angularResDev () {
@@ -232,7 +237,7 @@ greadability = function (nodes, links) {
           !(l.source === node && l.target === node);
       });
 
-      if (!degree[j] || incident.length === 0) continue;
+      if (!degree[j] || incident.length <= 1) continue;
 
       // Sort edges by the angle they make from an imaginary vector
       // emerging at angle 0 on the unit circle.
@@ -265,7 +270,7 @@ greadability = function (nodes, links) {
     }
 
     // Divide by number of nodes with degree != 0
-    return d / degree.filter(function (d) { return d; }).length;
+    return d / degree.filter(function (d) { return d >= 1; }).length;
   }
 
   cMax = (m * (m - 1) / 2) - d3.sum(degree.map(function (d) { return d * (d - 1); })) / 2;
