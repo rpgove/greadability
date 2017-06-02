@@ -85,7 +85,10 @@ greadability = function (nodes, links) {
       ];
 
       for (j = 0; j < links.length; ++j) {
-        if (i === j) continue;
+        // Self loops are not intersections
+        if (i === j ||
+          links[i].source === links[i].target ||
+          links[j].source === links[j].target) continue;
 
         // Links cannot intersect if they share a node
         if (links[i].source === links[j].source ||
@@ -169,8 +172,6 @@ greadability = function (nodes, links) {
     for (j = 0; j < n; ++j) {
       node = nodes[j];
 
-      if (!degree[j]) continue;
-
       idealMinAngle = 360 / degree[j];
 
       // Links that are incident to this node, but exclude self loops
@@ -178,6 +179,8 @@ greadability = function (nodes, links) {
         return (l.source === node || l.target === node) &&
           !(l.source === node && l.target === node);
       });
+
+      if (!degree[j] || incident.length === 0) continue;
 
       // Sort edges by the angle they make from an imaginary vector
       // emerging at angle 0 on the unit circle.
@@ -221,8 +224,6 @@ greadability = function (nodes, links) {
     for (j = 0; j < n; ++j) {
       node = nodes[j];
 
-      if (!degree[j]) continue;
-
       idealMinAngle = 360 / degree[j];
 
       // Links that are incident to this node, but exclude self loops
@@ -230,6 +231,8 @@ greadability = function (nodes, links) {
         return (l.source === node || l.target === node) &&
           !(l.source === node && l.target === node);
       });
+
+      if (!degree[j] || incident.length === 0) continue;
 
       // Sort edges by the angle they make from an imaginary vector
       // emerging at angle 0 on the unit circle.
