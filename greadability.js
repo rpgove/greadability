@@ -255,10 +255,10 @@ greadability = function (nodes, links) {
         ];
         return Math.abs(idealMinAngle - linesAngle(line1, line2)) / idealMinAngle;
       })) / degree[j];
-
-      // Divide by number of nodes with degree != 0
-      return d / degree.filter(function (d) { return d; }).length;
     }
+
+    // Divide by number of nodes with degree != 0
+    return d / degree.filter(function (d) { return d; }).length;
   }
 
   cMax = (m * (m - 1) / 2) - d3.sum(degree.map(function (d) { return d * (d - 1); })) / 2;
