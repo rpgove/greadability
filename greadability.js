@@ -173,8 +173,10 @@ greadability = function (nodes, links) {
 
       idealMinAngle = 360 / degree[j];
 
+      // Links that are incident to this node, but exclude self loops
       incident = links.filter(function (l) {
-        return l.source === node || l.target === node;
+        return (l.source === node || l.target === node) &&
+          !(l.source === node && l.target === node);
       });
 
       // Sort edges by the angle they make from an imaginary vector
@@ -223,8 +225,10 @@ greadability = function (nodes, links) {
 
       idealMinAngle = 360 / degree[j];
 
+      // Links that are incident to this node, but exclude self loops
       incident = links.filter(function (l) {
-        return l.source === node || l.target === node;
+        return (l.source === node || l.target === node) &&
+          !(l.source === node && l.target === node);
       });
 
       // Sort edges by the angle they make from an imaginary vector
