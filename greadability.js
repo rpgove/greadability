@@ -3,6 +3,10 @@ greadability = function (nodes, links) {
 
   var i, n, m, degree, c, cMax, idealAngle, d, dMax;
 
+  var getSumOfArray = function (numArray) {
+    return numArray.reduce(function (a, b) { return a + b; });
+  };
+
   // Filter out self loops
   links = links.filter(function (l) {
     return l.source !== l.target;
@@ -203,7 +207,7 @@ greadability = function (nodes, links) {
         return linesAngle(line0, lineB) - linesAngle(line0, lineA);
       });
 
-      minAngle = d3.min(incident.map(function (l, i) {
+      minAngle = Math.min.apply(null, incident.map(function (l, i) {
         var nextLink = incident[(i + 1) % incident.length];
         var line1 = [
           [l.source.x, l.source.y],
@@ -255,7 +259,7 @@ greadability = function (nodes, links) {
         return linesAngle(line0, lineB) - linesAngle(line0, lineA);
       });
 
-      d += d3.sum(incident.map(function (l, i) {
+      d += getSumOfArray(incident.map(function (l, i) {
         var nextLink = incident[(i + 1) % incident.length];
         var line1 = [
           [l.source.x, l.source.y],
@@ -273,7 +277,7 @@ greadability = function (nodes, links) {
     return d / degree.filter(function (d) { return d >= 1; }).length;
   }
 
-  cMax = (m * (m - 1) / 2) - d3.sum(degree.map(function (d) { return d * (d - 1); })) / 2;
+  cMax = (m * (m - 1) / 2) - getSumOfArray(degree.map(function (d) { return d * (d - 1); })) / 2;
 
   c = linkCrossings();
 
