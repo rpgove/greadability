@@ -8,8 +8,7 @@ var greadability = function (nodes, links) {
   var i,
       j,
       n = nodes.length,
-      m = links.length,
-      crossMat = {},
+      m,
       degree = new Array(nodes.length),
       c = 0,
       cMax,
@@ -39,6 +38,8 @@ var greadability = function (nodes, links) {
     links = links.filter(function (l) {
       return l.source !== l.target;
     });
+
+    m = links.length;
 
     for (i = 0; i < n; ++i) {
       nodes[i].index = i;
@@ -129,81 +130,41 @@ var greadability = function (nodes, links) {
   }
 
   function linkCrossings () {
-    var i, j, c = 0;
+    var i, j, c = 0, d = 0, link1, link2, line1, line2;;
 
     // Sum the upper diagonal of the edge crossing matrix.
     for (i = 0; i < m; ++i) {
       for (j = i + 1; j < m; ++j) {
+        link1 = links[i], link2 = links[j];
+
         // Check if link i and link j intersect
-        c += linksCross(links[i], links[j]) ? 1 : 0;
+        if (linksCross(link1, link2)) {
+          line1 = [
+            [link1.source.x, link1.source.y],
+            [link1.target.x, link1.target.y]
+          ];
+          line2 = [
+            [link2.source.x, link2.source.y],
+            [link2.target.x, link2.target.y]
+          ];
+          ++c;
+          d += Math.abs(idealAngle - linesAngle(line1, line2));
+        }
       }
     }
 
-    return 2 * c;
+    return {c: 2*c, d: 2*d};
   }
 
-  function linesAngle (line1, line2, linesAreSegments) {
-    // Acute angle of intersection, in degrees
+  function linesAngle (line1, line2) {
+    // Acute angle of intersection, in degrees. Assumes these lines
+    // intersect.
     // TODO: case where both slopes == 0 but angle should be 180
     var slope1 = (line1[1][1] - line1[0][1]) / (line1[1][0] - line1[0][0]);
     var slope2 = (line2[1][1] - line2[0][1]) / (line2[1][0] - line2[0][0]);
     var angle = Math.abs(Math.atan(slope1) - Math.atan(slope2));
 
     return (angle > Math.PI / 2 ? Math.PI - angle : angle) * 180 / Math.PI;
-  }
-
-  function linkAngleDevSum (link1) {
-    var j, line1, line2, link2, sum = 0;
-
-    line1 = [
-      [link1.source.x, link1.source.y],
-      [link1.target.x, link1.target.y]
-    ];
-
-    for (j = 0; j < m; ++j) {
-      link2 = links[j];
-      if (link1 === link2) continue;
-
-      // Links cannot intersect if they share a node
-      if (link1.source === link2.source ||
-        link1.source === link2.target ||
-        link1.target === link2.source ||
-        link1.target === link2.target) {
-        continue;
-      }
-
-      if (linksCross(link1, link2)) {
-        line2 = [
-          [link2.source.x, link2.source.y],
-          [link2.target.x, link2.target.y]
-        ];
-        if (linesCross(line1, line2)) sum += Math.abs(idealAngle - linesAngle(line1, line2));
-      }
-    }
-
-    return sum;
-  }
-
-  function linkCrossingAngle () {
-    var i, j, d = 0, link1, link2, line1, line2;
-
-    // Sum for the upper diagonal of the link crossing matrix.
-    for (i = 0; i < m; ++i) {
-      for (j = i + 1; j < m; ++j) {
-        link1 = links[i], link2 = links[j];
-        line1 = [
-          [link1.source.x, link1.source.y],
-          [link1.target.x, link1.target.y]
-        ];
-        line2 = [
-          [link2.source.x, link2.source.y],
-          [link2.target.x, link2.target.y]
-        ];
-        if (linesCross(line1, line2)) d += Math.abs(idealAngle - linesAngle(line1, line2));
-      }
-    }
-
-    return 2 * d;
   }
 
   function angularResMin () {
@@ -306,15 +267,13 @@ var greadability = function (nodes, links) {
 
   cMax = (m * (m - 1) / 2) - getSumOfArray(degree.map(function (d) { return d.length * (d.length - 1); })) / 2;
 
-  c = linkCrossings();
+  var crossInfo = linkCrossings();
 
-  dMax = c * idealAngle;
-
-  d = linkCrossingAngle();
+  dMax = crossInfo.c * idealAngle;
 
   graphStats.crossing = 1 - (cMax > 0 ? c / cMax : 0);
 
-  graphStats.crossingAngle = 1 - (dMax > 0 ? d / dMax : 0);
+  graphStats.crossingAngle = 1 - (dMax > 0 ? crossInfo.d / dMax : 0);
 
   graphStats.angularResolutionMin = 1 - angularResMin();
 
