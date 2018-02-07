@@ -6,25 +6,16 @@
 
 var greadability = function (nodes, links) {
   var i,
+      j,
       n = nodes.length,
       m = links.length,
-      l,
-      crossMat = new Array(links.length),
+      crossMat = {},
       degree = new Array(nodes.length),
-      c,
+      c = 0,
       cMax,
       idealAngle = 70,
       d,
       dMax;
-
-  var getSumOfArray = function (numArray) {
-    return numArray.reduce(function (a, b) { return a + b; });
-  };
-
-  // Filter out self loops
-  links = links.filter(function (l) {
-    return l.source !== l.target;
-  });
 
   /*
   * Tracks the global graph readability metrics.
@@ -36,25 +27,37 @@ var greadability = function (nodes, links) {
     angularResolutionDev: 0, // Normalized avg dev from each link
   };
 
-  for (i = 0; i < n; ++i) {
-    nodes[i].index = i;
-    degree[i] = [];
-  }
-
-  // Make sure source and target are nodes and not indices.
-  // Calculate degree.
-  for (i = 0; i < m; ++i) {
-    l = links[i];
-    if (typeof l.source !== "object") l.source = nodes[l.source];
-    if (typeof l.target !== "object") l.target = nodes[l.target];
-
-    l.index = i;
-
-    degree[l.source.index].push(l);
-    degree[l.target.index].push(l);
-
-    crossMat[i] = new Array(m);
+  var getSumOfArray = function (numArray) {
+    var i = 0, n = numArray.length, sum = 0;
+    for (; i < n; ++i) sum += numArray[i];
+    return sum;
   };
+
+  var initialize = function () {
+    var i, j, link1, link2, line1, line2, key, intersect;
+    // Filter out self loops
+    links = links.filter(function (l) {
+      return l.source !== l.target;
+    });
+
+    for (i = 0; i < n; ++i) {
+      nodes[i].index = i;
+      degree[i] = [];
+    }
+
+    // Make sure source and target are nodes and not indices.
+    // Calculate degree.
+    for (i = 0; i < m; ++i) {
+      link1 = links[i];
+      if (typeof link1.source !== "object") link1.source = nodes[link1.source];
+      if (typeof link1.target !== "object") link1.target = nodes[link1.target];
+
+      link1.index = i;
+
+      degree[link1.source.index].push(link1);
+      degree[link1.target.index].push(link1);
+    };
+  }
 
   // Assume node.x and node.y are the coordinates
 
@@ -72,15 +75,10 @@ var greadability = function (nodes, links) {
   }
 
   function linksCross (link1, link2) {
-    if (crossMat[link1.index][link2.index] !== undefined) return crossMat[link1.index][link2.index];
-    else if (crossMat[link2.index][link1.index] !== undefined) return crossMat[link2.index][link1.index];
-
     // Self loops are not intersections
     if (link1.index === link2.index ||
       link1.source === link1.target ||
       link2.source === link2.target) {
-      crossMat[link1.index][link1.index] = false;
-      crossMat[link2.index][link2.index] = false;
       return false;
     }
 
@@ -89,8 +87,6 @@ var greadability = function (nodes, links) {
       link1.source === link2.target ||
       link1.target === link2.source ||
       link1.target === link2.target) {
-      crossMat[link1.index][link2.index] = false;
-      crossMat[link2.index][link1.index] = false;
       return false;
     }
 
@@ -104,11 +100,7 @@ var greadability = function (nodes, links) {
       [link2.target.x, link2.target.y]
     ];
 
-    var intersect = linesCross(line1, line2);
-    crossMat[link1.index][link2.index] = intersect;
-    crossMat[link2.index][link1.index] = intersect;
-
-    return intersect;
+    return linesCross(line1, line2);
   }
 
   function linesCross (line1, line2) {
@@ -139,21 +131,19 @@ var greadability = function (nodes, links) {
   function linkCrossings () {
     var i, j, c = 0;
 
+    // Sum the upper diagonal of the edge crossing matrix.
     for (i = 0; i < m; ++i) {
-      for (j = 0; j < m; ++j) {
-        if (i === j) continue;
+      for (j = i + 1; j < m; ++j) {
         // Check if link i and link j intersect
         c += linksCross(links[i], links[j]) ? 1 : 0;
       }
     }
 
-    return c;
+    return 2 * c;
   }
 
   function linesAngle (line1, line2, linesAreSegments) {
     // Acute angle of intersection, in degrees
-    if (linesAreSegments && !linesCross(line1, line2)) return 0;
-
     // TODO: case where both slopes == 0 but angle should be 180
     var slope1 = (line1[1][1] - line1[0][1]) / (line1[1][0] - line1[0][0]);
     var slope2 = (line2[1][1] - line2[0][1]) / (line2[1][0] - line2[0][0]);
@@ -187,7 +177,7 @@ var greadability = function (nodes, links) {
           [link2.source.x, link2.source.y],
           [link2.target.x, link2.target.y]
         ];
-        sum += Math.abs(idealAngle - linesAngle(line1, line2, true));
+        if (linesCross(line1, line2)) sum += Math.abs(idealAngle - linesAngle(line1, line2));
       }
     }
 
@@ -195,13 +185,25 @@ var greadability = function (nodes, links) {
   }
 
   function linkCrossingAngle () {
-    var i, d = 0;
+    var i, j, d = 0, link1, link2, line1, line2;
 
+    // Sum for the upper diagonal of the link crossing matrix.
     for (i = 0; i < m; ++i) {
-      d += linkAngleDevSum(links[i]);
+      for (j = i + 1; j < m; ++j) {
+        link1 = links[i], link2 = links[j];
+        line1 = [
+          [link1.source.x, link1.source.y],
+          [link1.target.x, link1.target.y]
+        ];
+        line2 = [
+          [link2.source.x, link2.source.y],
+          [link2.target.x, link2.target.y]
+        ];
+        if (linesCross(line1, line2)) d += Math.abs(idealAngle - linesAngle(line1, line2));
+      }
     }
 
-    return d;
+    return 2 * d;
   }
 
   function angularResMin () {
@@ -299,6 +301,8 @@ var greadability = function (nodes, links) {
     // Divide by number of nodes with degree != 0
     return d / degree.filter(function (d) { return d.length >= 1; }).length;
   }
+
+  initialize();
 
   cMax = (m * (m - 1) / 2) - getSumOfArray(degree.map(function (d) { return d.length * (d.length - 1); })) / 2;
 
