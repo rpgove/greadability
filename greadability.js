@@ -10,10 +10,8 @@ var greadability = function (nodes, links) {
       n = nodes.length,
       m,
       degree = new Array(nodes.length),
-      c = 0,
       cMax,
       idealAngle = 70,
-      d,
       dMax;
 
   /*
@@ -167,100 +165,79 @@ var greadability = function (nodes, links) {
     return (angle > Math.PI / 2 ? Math.PI - angle : angle) * 180 / Math.PI;
   }
 
-  function angularResMin () {
-    var j, d = 0, node, minAngle, idealMinAngle, incident;
+  function angularRes () {
+    var j,
+        resMin = 0,
+        resDev = 0,
+        nonZeroDeg,
+        node,
+        minAngle,
+        idealMinAngle,
+        incident,
+        line0,
+        line1,
+        line2,
+        incidentLinkAngles,
+        nextLink;
+
+    nonZeroDeg = degree.filter(function (d) { return d.length >= 1; }).length;
 
     for (j = 0; j < n; ++j) {
       node = nodes[j];
+      line0 = [[node.x, node.y], [node.x+1, node.y]];
 
       // Links that are incident to this node (already filtered out self loops)
       incident = degree[j];
 
       if (incident.length <= 1) continue;
 
-      idealMinAngle = 360 / degree[j].length;
+      idealMinAngle = 360 / incident.length;
 
       // Sort edges by the angle they make from an imaginary vector
       // emerging at angle 0 on the unit circle.
       // Necessary for calculating angles of incident edges correctly
+      // TODO: These angles are in [0, 180] instead of [0, 360].
       incident.sort(function (a, b) {
-        var line0 = [[node.x, node.y], [node.x+1, node.y]];
-        var lineA = [
+        line1 = [
           [a.source.x, a.source.y],
           [a.target.x, a.target.y]
         ];
-        var lineB = [
+        line2 = [
           [b.source.x, b.source.y],
           [b.target.x, b.target.y]
         ];
-        return linesAngle(line0, lineB) - linesAngle(line0, lineA);
+        return linesAngle(line0, line2) - linesAngle(line0, line1);
       });
 
-      minAngle = Math.min.apply(null, incident.map(function (l, i) {
-        var nextLink = incident[(i + 1) % incident.length];
-        var line1 = [
+      incidentLinkAngles = incident.map(function (l, i) {
+        nextLink = incident[(i + 1) % incident.length];
+        line1 = [
           [l.source.x, l.source.y],
           [l.target.x, l.target.y]
         ];
-        var line2 = [
+        line2 = [
           [nextLink.source.x, nextLink.source.y],
           [nextLink.target.x, nextLink.target.y]
         ];
         return linesAngle(line1, line2);
-      }));
-
-      d += Math.abs(idealMinAngle - minAngle) / idealMinAngle;
-    }
-
-    // Divide by number of nodes with degree != 0
-    return d / degree.filter(function (d) { return d.length >= 1; }).length;
-  }
-
-  function angularResDev () {
-    var j, d = 0, node, idealMinAngle, incident;
-
-    for (j = 0; j < n; ++j) {
-      node = nodes[j];
-
-      // Links that are incident to this node (already filtered out self loops)
-      incident = degree[j];
-
-      if (incident.length <= 1) continue;
-
-      idealMinAngle = 360 / degree[j].length;
-
-      // Sort edges by the angle they make from an imaginary vector
-      // emerging at angle 0 on the unit circle.
-      // Necessary for calculating angles of incident edges correctly
-      incident.sort(function (a, b) {
-        var line0 = [[node.x, node.y], [node.x+1, node.y+1]];
-        var lineA = [
-          [a.source.x, a.source.y],
-          [a.target.x, a.target.y]
-        ];
-        var lineB = [
-          [b.source.x, b.source.y],
-          [b.target.x, b.target.y]
-        ];
-        return linesAngle(line0, lineB) - linesAngle(line0, lineA);
       });
 
-      d += getSumOfArray(incident.map(function (l, i) {
-        var nextLink = incident[(i + 1) % incident.length];
-        var line1 = [
-          [l.source.x, l.source.y],
-          [l.target.x, l.target.y]
-        ];
-        var line2 = [
-          [nextLink.source.x, nextLink.source.y],
-          [nextLink.target.x, nextLink.target.y]
-        ];
-        return Math.abs(idealMinAngle - linesAngle(line1, line2)) / idealMinAngle;
-      })) / degree[j].length;
+      minAngle = Math.min.apply(null, incidentLinkAngles);
+
+      resMin += Math.abs(idealMinAngle - minAngle) / idealMinAngle;
+
+      resDev += getSumOfArray(incidentLinkAngles.map(function (angle) {
+        return Math.abs(idealMinAngle - angle) / idealMinAngle;
+      })) / incident.length;
     }
 
     // Divide by number of nodes with degree != 0
-    return d / degree.filter(function (d) { return d.length >= 1; }).length;
+    resMin = resMin / nonZeroDeg;
+
+    // Divide by number of nodes with degree != 0
+    resDev = resDev / nonZeroDeg;
+
+    return {resMin: resMin, resDev: resDev};
   }
 
   initialize();
@@ -271,13 +248,15 @@ var greadability = function (nodes, links) {
 
   dMax = crossInfo.c * idealAngle;
 
-  graphStats.crossing = 1 - (cMax > 0 ? c / cMax : 0);
+  graphStats.crossing = 1 - (cMax > 0 ? crossInfo.c / cMax : 0);
 
   graphStats.crossingAngle = 1 - (dMax > 0 ? crossInfo.d / dMax : 0);
 
-  graphStats.angularResolutionMin = 1 - angularResMin();
+  var angularResInfo = angularRes();
 
-  graphStats.angularResolutionDev = 1 - angularResDev();
+  graphStats.angularResolutionMin = 1 - angularResInfo.resMin;
+
+  graphStats.angularResolutionDev = 1 - angularResInfo.resDev;
 
   return graphStats;
 };
