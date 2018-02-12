@@ -31,7 +31,7 @@ var greadability = function (nodes, links) {
   };
 
   var initialize = function () {
-    var i, j, link1, link2, line1, line2, key, intersect;
+    var i, j, link;
     // Filter out self loops
     links = links.filter(function (l) {
       return l.source !== l.target;
@@ -47,14 +47,44 @@ var greadability = function (nodes, links) {
     // Make sure source and target are nodes and not indices.
     // Calculate degree.
     for (i = 0; i < m; ++i) {
-      link1 = links[i];
-      if (typeof link1.source !== "object") link1.source = nodes[link1.source];
-      if (typeof link1.target !== "object") link1.target = nodes[link1.target];
+      link = links[i];
+      if (typeof link.source !== "object") link.source = nodes[link.source];
+      if (typeof link.target !== "object") link.target = nodes[link.target];
+    }
 
-      link1.index = i;
+    // Filter out duplicate links
+    links.forEach(function (l) {
+      var s = l.source, t = l.target;
+      if (s.index > t.index) {
+        l.source = t;
+        l.target = s;
+      }
+    });
+    links.sort(function (a, b) {
+      if (a.source.index < b.source.index) return -1;
+      if (a.source.index > b.source.index) return 1;
+      if (a.target.index < b.target.index) return -1;
+      if (a.target.index > b.target.index) return 1;
+      return 0;
+    });
+    i = 1;
+    while (i < links.length) {
+      if (links[i-1].source.index === links[i].source.index &&
+        links[i-1].target.index === links[i].target.index) {
+        links.splice(i, 1);
+      }
+      else ++i;
+    }
 
-      degree[link1.source.index].push(link1);
-      degree[link1.target.index].push(link1);
+    // Update length, if a duplicate was deleted.
+    m = links.length;
+
+    for (i = 0; i < m; ++i) {
+      link = links[i];
+      link.index = i;
+
+      degree[link.source.index].push(link);
+      degree[link.target.index].push(link);
     };
   }
 
@@ -66,11 +96,38 @@ var greadability = function (nodes, links) {
     return p1[0] * p2[1] - p2[0] * p1[1];
   }
 
+  // Is point k on the line segment formed by points i and j?
+  // Inclusive, so if pk == pi or pk == pj then return true.
   function onSegment (pi, pj, pk) {
     return Math.min(pi[0], pj[0]) <= pk[0] &&
       pk[0] <= Math.max(pi[0], pj[0]) &&
       Math.min(pi[1], pj[1]) <= pk[1] &&
       pk[1] <= Math.max(pi[1], pj[1]);
+  }
+
+  function linesCross (line1, line2) {
+    var d1, d2, d3, d4;
+
+    // CLRS 2nd ed. pg. 937
+    d1 = direction(line2[0], line2[1], line1[0]);
+    d2 = direction(line2[0], line2[1], line1[1]);
+    d3 = direction(line1[0], line1[1], line2[0]);
+    d4 = direction(line1[0], line1[1], line2[1]);
+
+    if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
+      ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) {
+      return true;
+    } else if (d1 === 0 && onSegment(line2[0], line2[1], line1[0])) {
+      return true;
+    } else if (d2 === 0 && onSegment(line2[0], line2[1], line1[1])) {
+      return true;
+    } else if (d3 === 0 && onSegment(line1[0], line1[1], line2[0])) {
+      return true;
+    } else if (d4 === 0 && onSegment(line1[0], line1[1], line2[1])) {
+      return true;
+    }
+
+    return false;
   }
 
   function linksCross (link1, link2) {
@@ -102,31 +159,6 @@ var greadability = function (nodes, links) {
     return linesCross(line1, line2);
   }
 
-  function linesCross (line1, line2) {
-    var d1, d2, d3, d4;
-
-    // CLRS 2nd ed. pg. 937
-    d1 = direction(line2[0], line2[1], line1[0]);
-    d2 = direction(line2[0], line2[1], line1[1]);
-    d3 = direction(line1[0], line1[1], line2[0]);
-    d4 = direction(line1[0], line1[1], line2[1]);
-
-    if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
-      ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) {
-      return true;
-    } else if (d1 === 0 && onSegment(line2[0], line2[1], line1[0])) {
-      return true;
-    } else if (d2 === 0 && onSegment(line2[0], line2[1], line1[1])) {
-      return true;
-    } else if (d3 === 0 && onSegment(line1[0], line1[1], line2[0])) {
-      return true;
-    } else if (d4 === 0 && onSegment(line1[0], line1[1], line2[1])) {
-      return true;
-    }
-
-    return false;
-  }
-
   function linkCrossings () {
     var i, j, c = 0, d = 0, link1, link2, line1, line2;;
 
@@ -146,7 +178,7 @@ var greadability = function (nodes, links) {
             [link2.target.x, link2.target.y]
           ];
           ++c;
-          d += Math.abs(idealAngle - linesAngle(line1, line2));
+          d += Math.abs(idealAngle - acuteLinesAngle(line1, line2));
         }
       }
     }
@@ -154,12 +186,81 @@ var greadability = function (nodes, links) {
     return {c: 2*c, d: 2*d};
   }
 
-  function linesAngle (line1, line2) {
+  function linesegmentsAngle (line1, line2) {
+    // Finds the (counterclockwise) angle from line segement line1 to
+    // line segment line2. Assumes the lines share one end point.
+    // If both endpoints are the same, or if both lines have zero
+    // length, then return 0 angle.
+    // Param order matters:
+    // linesegmentsAngle(line1, line2) != linesegmentsAngle(line2, line1)
+    var temp, len, angle1, angle2, sLine1, sLine2;
+
+    // Re-orient so that line1[0] and line2[0] are the same.
+    if (line1[0][0] === line2[1][0] && line1[0][1] === line2[1][1]) {
+      temp = line2[1];
+      line2[1] = line2[0];
+      line2[0] = temp;
+    } else if (line1[1][0] === line2[0][0] && line1[1][1] === line2[0][1]) {
+      temp = line1[1];
+      line1[1] = line1[0];
+      line1[0] = temp;
+    } else if (line1[1][0] === line2[1][0] && line1[1][1] === line2[1][1]) {
+      temp = line1[1];
+      line1[1] = line1[0];
+      line1[0] = temp;
+      temp = line2[1];
+      line2[1] = line2[0];
+      line2[0] = temp;
+    }
+
+    // Shift the line so that the first point is at (0,0).
+    sLine1 = [
+      [line1[0][0] - line1[0][0], line1[0][1] - line1[0][1]],
+      [line1[1][0] - line1[0][0], line1[1][1] - line1[0][1]]
+    ];
+    // Normalize the line length.
+    len = Math.hypot(sLine1[1][0], sLine1[1][1]);
+    if (len === 0) return 0;
+    sLine1[1][0] /= len;
+    sLine1[1][1] /= len;
+    // If y < 0, angle = acos(x), otherwise angle = 360 - acos(x)
+    angle1 = Math.acos(sLine1[1][0]) * 180 / Math.PI;
+    if (sLine1[1][1] < 0) angle1 = 360 - angle1;
+
+    // Shift the line so that the first point is at (0,0).
+    sLine2 = [
+      [line2[0][0] - line2[0][0], line2[0][1] - line2[0][1]],
+      [line2[1][0] - line2[0][0], line2[1][1] - line2[0][1]]
+    ];
+    // Normalize the line length.
+    len = Math.hypot(sLine2[1][0], sLine2[1][1]);
+    if (len === 0) return 0;
+    sLine2[1][0] /= len;
+    sLine2[1][1] /= len;
+    // If y < 0, angle = acos(x), otherwise angle = 360 - acos(x)
+    angle2 = Math.acos(sLine2[1][0]) * 180 / Math.PI;
+    if (sLine2[1][1] < 0) angle2 = 360 - angle2;
+
+    return angle1 <= angle2 ? angle2 - angle1 : 360 - (angle1 - angle2);
+  }
+
+  function acuteLinesAngle (line1, line2) {
     // Acute angle of intersection, in degrees. Assumes these lines
     // intersect.
-    // TODO: case where both slopes == 0 but angle should be 180
     var slope1 = (line1[1][1] - line1[0][1]) / (line1[1][0] - line1[0][0]);
     var slope2 = (line2[1][1] - line2[0][1]) / (line2[1][0] - line2[0][0]);
+
+    // If these lines are two links incident on the same node, need
+    // to check if the angle is 0 or 180.
+    if (slope1 === slope2) {
+      // If line2 is not on line1 and line1 is not on line2, then
+      // the lines share only one point and the angle must be 180.
+      if (!(onSegment(line1[0], line1[1], line2[0]) && onSegment(line1[0], line1[1], line2[1])) ||
+        !(onSegment(line2[0], line2[1], line1[0]) && onSegment(line2[0], line2[1], line1[1])))
+        return 180;
+      else return 0;
+    }
+
     var angle = Math.abs(Math.atan(slope1) - Math.atan(slope2));
 
     return (angle > Math.PI / 2 ? Math.PI - angle : angle) * 180 / Math.PI;
@@ -196,7 +297,6 @@ var greadability = function (nodes, links) {
       // Sort edges by the angle they make from an imaginary vector
       // emerging at angle 0 on the unit circle.
       // Necessary for calculating angles of incident edges correctly
-      // TODO: These angles are in [0, 180] instead of [0, 360].
       incident.sort(function (a, b) {
         line1 = [
           [a.source.x, a.source.y],
@@ -206,7 +306,9 @@ var greadability = function (nodes, links) {
           [b.source.x, b.source.y],
           [b.target.x, b.target.y]
         ];
-        return linesAngle(line0, line2) - linesAngle(line0, line1);
+        var angleA = linesegmentsAngle(line0, line1);
+        var angleB = linesegmentsAngle(line0, line2);
+        return angleA < angleB ? -1 : angleA > angleB ? 1 : 0;
       });
 
       incidentLinkAngles = incident.map(function (l, i) {
@@ -219,7 +321,7 @@ var greadability = function (nodes, links) {
           [nextLink.source.x, nextLink.source.y],
           [nextLink.target.x, nextLink.target.y]
         ];
-        return linesAngle(line1, line2);
+        return linesegmentsAngle(line1, line2);
       });
 
       minAngle = Math.min.apply(null, incidentLinkAngles);
@@ -228,7 +330,7 @@ var greadability = function (nodes, links) {
 
       resDev += getSumOfArray(incidentLinkAngles.map(function (angle) {
         return Math.abs(idealMinAngle - angle) / idealMinAngle;
-      })) / incident.length;
+      })) / (2 * incident.length - 2);
     }
 
     // Divide by number of nodes with degree != 0
