@@ -4,7 +4,7 @@
   (factory((global.greadability = global.greadability || {})));
 }(this, (function (exports) { 'use strict';
 
-var greadability = function (nodes, links) {
+var greadability = function (nodes, links, id) {
   var i,
       j,
       n = nodes.length,
@@ -32,6 +32,7 @@ var greadability = function (nodes, links) {
 
   var initialize = function () {
     var i, j, link;
+    var nodeById = {};
     // Filter out self loops
     links = links.filter(function (l) {
       return l.source !== l.target;
@@ -39,17 +40,21 @@ var greadability = function (nodes, links) {
 
     m = links.length;
 
+    if (!id) {
+      id = function (d) { return d.index; };
+    }
+
     for (i = 0; i < n; ++i) {
       nodes[i].index = i;
       degree[i] = [];
+      nodeById[id(nodes[i], i, nodeById)] = nodes[i];
     }
 
     // Make sure source and target are nodes and not indices.
-    // Calculate degree.
     for (i = 0; i < m; ++i) {
       link = links[i];
-      if (typeof link.source !== "object") link.source = nodes[link.source];
-      if (typeof link.target !== "object") link.target = nodes[link.target];
+      if (typeof link.source !== "object") link.source = nodeById[link.source];
+      if (typeof link.target !== "object") link.target = nodeById[link.target];
     }
 
     // Filter out duplicate links
@@ -79,6 +84,7 @@ var greadability = function (nodes, links) {
     // Update length, if a duplicate was deleted.
     m = links.length;
 
+    // Calculate degree.
     for (i = 0; i < m; ++i) {
       link = links[i];
       link.index = i;
