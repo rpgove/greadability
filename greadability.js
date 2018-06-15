@@ -58,13 +58,16 @@ var greadability = function (nodes, links, id) {
     }
 
     // Filter out duplicate links
+    var filteredLinks = [];
     links.forEach(function (l) {
       var s = l.source, t = l.target;
       if (s.index > t.index) {
-        l.source = t;
-        l.target = s;
+        filteredLinks.push({source: t, target: s});
+      } else {
+        filteredLinks.push({source: s, target: t});
       }
     });
+    links = filteredLinks;
     links.sort(function (a, b) {
       if (a.source.index < b.source.index) return -1;
       if (a.source.index > b.source.index) return 1;
