@@ -63,7 +63,7 @@ function computeReadability () {
 
 <a name="greadability" href="#greadability">#</a> <i>greadability</i>.<b>greadability</b>(<i>nodes</i>, <i>links</i>[, <i>id</i>]) [<>](https://github.com/rpgove/greadability/blob/master/greadability.js#L7 "Source")
 
-Computes the readability metrics of the graph formed by the *nodes* and *links* and returns an object with the readability metrics as the properties and values:
+Computes the readability metrics of the graph formed by the *nodes* and *links*. Each node in *nodes* must have `x` and `y` attributes specifying each node's position. This function returns an object with the readability metrics as the properties and values:
 
 ```javascript
 {
