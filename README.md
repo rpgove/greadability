@@ -65,7 +65,7 @@ function computeReadability () {
 
 Computes the readability metrics of the graph formed by the *nodes* and *links* and returns an object with the readability metrics as the properties and values:
 
-```json
+```javascript
 {
 	crossing: 1,
 	crossingAngle: 0.7,
