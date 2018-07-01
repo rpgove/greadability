@@ -12,7 +12,7 @@ edges on each vertex.
 
 Each is a number in the range [0, 1] with higher numbers indicating better layouts. You can use this to measure when a graph layout algorithm has stopped improving (i.e. when it has [converged](https://bl.ocks.org/rpgove/8c8b08cc0ae1e1e969f5d2904a6a0e26)), or to find [good graph layout algorithm parameters](https://bl.ocks.org/rpgove/553450ed8ef2a48acd4121a85653d880).
 
-[<img alt="Force Directed Layout Quality Convergence" src="https://raw.githubusercontent.com/rpgove/greadability/master/img/convergence.png" width="800" height="420">](https://bl.ocks.org/rpgove/8c8b08cc0ae1e1e969f5d2904a6a0e26)[<img alt="Automatically Finding Better Force Directed Layout Parameters (10x10 Grid)" src="https://raw.githubusercontent.com/rpgove/greadability/master/img/bestparameters.png" width="825" height="562">](https://bl.ocks.org/rpgove/553450ed8ef2a48acd4121a85653d880)
+[<img alt="Force Directed Layout Quality Convergence" src="https://raw.githubusercontent.com/rpgove/greadability/master/img/convergence.png" width="400" height="201">](https://bl.ocks.org/rpgove/8c8b08cc0ae1e1e969f5d2904a6a0e26)[<img alt="Automatically Finding Better Force Directed Layout Parameters (10x10 Grid)" src="https://raw.githubusercontent.com/rpgove/greadability/master/img/bestparameters.png" width="412" height="281">](https://bl.ocks.org/rpgove/553450ed8ef2a48acd4121a85653d880)
 
 To use this module, create a layout for a graph (e.g. using [D3.js](https://d3js.org)) so that each vertex (also known as a *node*) has `x` and `y` properties for its coordinates and each edge (also known as a *link*) has `source` and `target` properties that point to vertices.
 
