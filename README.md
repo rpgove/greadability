@@ -16,7 +16,11 @@ Each is a number in the range [0, 1] with higher numbers indicating better layou
 
 To use this module, create a layout for a graph (e.g. using [D3.js](https://d3js.org)) so that each vertex (also known as a *node*) has `x` and `y` properties for its coordinates and each edge (also known as a *link*) has `source` and `target` properties that point to vertices.
 
-See Dunne *et al* and [their earlier tech report](http://www.cs.umd.edu/hcil/trs/2009-13/2009-13.pdf) for more details on these and other readability metrics.
+If you use this library please cite the following paper for the definition of the angular resolution (deviation) metric and the proof that it yields values in the range [0, 1]:
+
+Robert Gove. "It Pays to Be Lazy: Reusing Force Approximations to Compute Better Graph Layouts Faster." Proceedings of Forum Media Technology, 2018. [Preprint PDF.](https://osf.io/wgzn5/)
+
+For the other metrics and a general discussion of graph layout readability metrics, see Dunne *et al* and [their earlier tech report](http://www.cs.umd.edu/hcil/trs/2009-13/2009-13.pdf):
 
 C. Dunne, S. I. Ross, B. Shneiderman, and M. Martino. "Readability metric feedback for aiding node-link visualization designers," IBM Journal of Research and Development, 59(2/3) pages 14:1--14:16, 2015.
 
